@@ -297,9 +297,7 @@ def build_imperator_flow(config: dict | None = None):
     workflow.add_edge("max_iterations_fallback", "extract_response")
     workflow.add_edge("extract_response", END)
 
-    # Use PostgresSaver for conversation persistence
-    from langgraph.checkpoint.memory import MemorySaver
+    # Use PostgresSaver for persistent conversation state
+    from app.checkpointer import get_checkpointer
 
-    # TODO: Switch to PostgresSaver once langgraph-checkpoint-postgres
-    # is added to requirements.txt. For now, MemorySaver for development.
-    return workflow.compile(checkpointer=MemorySaver())
+    return workflow.compile(checkpointer=get_checkpointer())
