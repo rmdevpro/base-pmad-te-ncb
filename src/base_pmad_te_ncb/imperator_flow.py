@@ -308,4 +308,6 @@ def build_imperator_flow(config: dict | None = None):
     # Use PostgresSaver for persistent conversation state
     from app.checkpointer import get_checkpointer
 
-    return workflow.compile(checkpointer=get_checkpointer())
+    cp = get_checkpointer()
+    _log.info("Compiling Imperator graph with checkpointer: %s", type(cp).__name__)
+    return workflow.compile(checkpointer=cp)
