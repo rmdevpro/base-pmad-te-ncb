@@ -94,6 +94,8 @@ async def init_node(state: ImperatorState) -> dict:
     """
     payload = state.get("payload", {})
     existing_messages = state.get("messages", [])
+    _log.info("init_node: existing_messages=%d, payload_model=%s",
+              len(existing_messages), payload.get("model", "?"))
 
     # Resolve conversation_id
     conv_id = payload.get("conversation_id")
