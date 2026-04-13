@@ -87,11 +87,13 @@ class ImperatorState(TypedDict):
 async def init_node(state: ImperatorState) -> dict:
     """Parse the OpenAI payload and set up the conversation.
 
-    Extracts messages, resolves conversation_id (default / new / explicit),
-    and loads the system prompt.
+    On first turn (no prior messages from checkpointer): builds full message
+    list with system prompt + user message.
+    On resumed turns (checkpointer loaded prior messages): only appends the
+    new user message — system prompt and history are already in state.
     """
     payload = state.get("payload", {})
-    model = payload.get("model", "host")
+    existing_messages = state.get("messages", [])
 
     # Resolve conversation_id
     conv_id = payload.get("conversation_id")
@@ -101,30 +103,34 @@ async def init_node(state: ImperatorState) -> dict:
     elif not conv_id:
         conv_id = _get_default_thread_id()
 
-    # Parse messages from OpenAI format to LangChain messages
+    # Extract the last user message from the payload
     raw_messages = payload.get("messages", [])
-    lc_messages = []
-    for m in raw_messages:
-        role = m.get("role", "user")
-        content = m.get("content", "")
-        if role == "system":
-            lc_messages.append(SystemMessage(content=content))
-        elif role == "assistant":
-            lc_messages.append(AIMessage(content=content, tool_calls=m.get("tool_calls", [])))
-        elif role == "tool":
-            lc_messages.append(ToolMessage(content=content, tool_call_id=m.get("tool_call_id", "unknown")))
-        else:
-            lc_messages.append(HumanMessage(content=content))
+    new_user_msg = None
+    for m in reversed(raw_messages):
+        if m.get("role") == "user":
+            new_user_msg = HumanMessage(content=m.get("content", ""))
+            break
 
-    # Load system prompt if not already in messages
-    has_system = any(isinstance(m, SystemMessage) for m in lc_messages)
-    if not has_system:
-        system_content = _load_system_prompt()
-        if system_content:
-            lc_messages = [SystemMessage(content=system_content)] + lc_messages
+    if not new_user_msg:
+        new_user_msg = HumanMessage(content="")
+
+    # Resumed conversation: prior messages loaded by checkpointer
+    if existing_messages:
+        return {
+            "messages": [new_user_msg],
+            "conversation_id": conv_id,
+            "iteration_count": 0,
+        }
+
+    # First turn: build full message list with system prompt
+    system_content = _load_system_prompt()
+    messages = []
+    if system_content:
+        messages.append(SystemMessage(content=system_content))
+    messages.append(new_user_msg)
 
     return {
-        "messages": lc_messages,
+        "messages": messages,
         "conversation_id": conv_id,
         "iteration_count": 0,
     }
