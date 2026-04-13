@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "base-pmad-te-ncb"
+version = "0.1.0"
+description = "Base Thought Engine for pMADs — PostgresSaver-backed Imperator, no Context Broker"
+requires-python = ">=3.12"
+dependencies = [
+    "langgraph>=0.2.60",
+    "langchain-core>=0.3.28",
+    "langchain-openai>=0.2.14",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
